@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Active / All-Time Players Table</title>
+  <title>Active / All-Time Players Table with Search</title>
 
   <style>
     body {
@@ -16,7 +16,7 @@
 
     .button-container {
       text-align: center;
-      margin: 30px 0 0 0;
+      margin: 30px 0 10px 0;
     }
 
     button {
@@ -36,9 +36,28 @@
       color: black;
     }
 
+    #searchContainer {
+      text-align: center;
+      margin: 10px 0 20px 0;
+    }
+
+    #searchInput {
+      padding: 8px 15px;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 2px solid white;
+      width: 250px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+    }
+
+    #searchInput::placeholder {
+      color: #ccc;
+    }
+
     table {
       border-collapse: collapse;
-      margin: 30px auto 60px auto;
+      margin: 0 auto 60px auto;
       width: 90%;
       max-width: 900px;
       background-color: rgba(0, 0, 0, 0.6);
@@ -64,6 +83,10 @@
     <button id="btnAllTime">All-Time</button>
   </div>
 
+  <div id="searchContainer">
+    <input type="text" id="searchInput" placeholder="Search by Name..." />
+  </div>
+
   <table id="csvTable">
     <thead></thead>
     <tbody></tbody>
@@ -75,6 +98,10 @@
     const table = document.getElementById('csvTable');
     const btnActive = document.getElementById('btnActive');
     const btnAllTime = document.getElementById('btnAllTime');
+    const searchInput = document.getElementById('searchInput');
+
+    let currentData = []; // store current rows data for filtering
+    let currentHeaders = [];
 
     async function loadCSV(csvFile) {
       try {
@@ -90,8 +117,12 @@
           return;
         }
 
-        buildTable(parsed.meta.fields, parsed.data);
+        currentHeaders = parsed.meta.fields;
+        currentData = parsed.data;
+
+        buildTable(currentHeaders, currentData);
         makeTableSortable(table);
+        searchInput.value = '';  // clear search on new CSV load
       } catch (err) {
         console.error(err);
         alert('Error loading CSV file');
@@ -155,6 +186,36 @@
 
       rowsArray.forEach(row => tbody.appendChild(row));
     }
+
+    // Search/filter function
+    searchInput.addEventListener('input', () => {
+      const filter = searchInput.value.toLowerCase();
+      const tbody = table.querySelector('tbody');
+
+      tbody.innerHTML = '';
+
+      const nameIndex = currentHeaders.findIndex(h => h.toLowerCase() === 'name');
+      if (nameIndex === -1) {
+        // If no "Name" column, just show all
+        buildTable(currentHeaders, currentData);
+        return;
+      }
+
+      const filteredRows = currentData.filter(row => {
+        const name = row[currentHeaders[nameIndex]] || '';
+        return name.toLowerCase().includes(filter);
+      });
+
+      filteredRows.forEach(row => {
+        const tr = document.createElement('tr');
+        currentHeaders.forEach(hdr => {
+          const td = document.createElement('td');
+          td.textContent = row[hdr];
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    });
 
     // Button click handlers
     btnActive.onclick = () => {
