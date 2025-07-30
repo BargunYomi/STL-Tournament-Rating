@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sortable Players Table</title>
+  <title>Active / All-Time Players Table</title>
 
   <style>
     body {
@@ -13,19 +13,44 @@
       background-size: cover;
       color: white;
     }
+
+    .button-container {
+      text-align: center;
+      margin: 30px 0 0 0;
+    }
+
+    button {
+      background-color: rgba(255, 255, 255, 0.2);
+      border: 2px solid white;
+      color: white;
+      font-size: 1.1rem;
+      margin: 0 10px;
+      padding: 10px 25px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover, button.active {
+      background-color: rgba(255, 255, 255, 0.5);
+      color: black;
+    }
+
     table {
       border-collapse: collapse;
-      margin: 50px auto;
+      margin: 30px auto 60px auto;
       width: 90%;
       max-width: 900px;
       background-color: rgba(0, 0, 0, 0.6);
       cursor: pointer;
     }
+
     th, td {
       border: 2px solid white;
       padding: 10px 15px;
       text-align: left;
     }
+
     th {
       background-color: rgba(255, 255, 255, 0.2);
       user-select: none;
@@ -34,51 +59,52 @@
 </head>
 <body>
 
-  <table id="playersTable">
-    <thead>
-      <!-- will be generated dynamically -->
-    </thead>
-    <tbody>
-      <!-- will be generated dynamically -->
-    </tbody>
+  <div class="button-container">
+    <button id="btnActive" class="active">Active</button>
+    <button id="btnAllTime">All-Time</button>
+  </div>
+
+  <table id="csvTable">
+    <thead></thead>
+    <tbody></tbody>
   </table>
 
-  <!-- Load PapaParse from CDN to parse CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
-    async function loadCSV() {
+    const table = document.getElementById('csvTable');
+    const btnActive = document.getElementById('btnActive');
+    const btnAllTime = document.getElementById('btnAllTime');
+
+    async function loadCSV(csvFile) {
       try {
-        // Fetch the CSV file
-        const response = await fetch('players.csv');
-        if (!response.ok) throw new Error('Failed to load CSV file');
+        const response = await fetch(csvFile);
+        if (!response.ok) throw new Error('Failed to load CSV file: ' + csvFile);
         const csvText = await response.text();
 
-        // Parse CSV with PapaParse
-        const parsed = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-        });
+        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
 
         if (parsed.errors.length) {
           console.error('CSV parse errors:', parsed.errors);
+          alert('Error parsing CSV file');
           return;
         }
 
         buildTable(parsed.meta.fields, parsed.data);
-        makeTableSortable(document.getElementById('playersTable'));
-      } catch (error) {
-        console.error(error);
-        alert('Error loading or parsing players.csv');
+        makeTableSortable(table);
+      } catch (err) {
+        console.error(err);
+        alert('Error loading CSV file');
       }
     }
 
     function buildTable(headers, rows) {
-      const thead = document.querySelector('#playersTable thead');
-      const tbody = document.querySelector('#playersTable tbody');
+      const thead = table.querySelector('thead');
+      const tbody = table.querySelector('tbody');
 
-      // Build headers
       thead.innerHTML = '';
+      tbody.innerHTML = '';
+
       const trHead = document.createElement('tr');
       headers.forEach(hdr => {
         const th = document.createElement('th');
@@ -87,8 +113,6 @@
       });
       thead.appendChild(trHead);
 
-      // Build rows
-      tbody.innerHTML = '';
       rows.forEach(row => {
         const tr = document.createElement('tr');
         headers.forEach(hdr => {
@@ -100,16 +124,15 @@
       });
     }
 
-    // Simple sorting function for the table by clicking headers
     function makeTableSortable(table) {
       const headers = table.querySelectorAll('th');
-      headers.forEach((th, index) => {
-        th.style.cursor = 'pointer';
+      headers.forEach((th, idx) => {
         let asc = true;
-        th.addEventListener('click', () => {
-          sortTableByColumn(table, index, asc);
+        th.style.cursor = 'pointer';
+        th.onclick = () => {
+          sortTableByColumn(table, idx, asc);
           asc = !asc;
-        });
+        };
       });
     }
 
@@ -117,7 +140,6 @@
       const tbody = table.tBodies[0];
       const rowsArray = Array.from(tbody.querySelectorAll('tr'));
 
-      // Detect if the column is numeric by checking first data row value
       const isNumeric = !isNaN(rowsArray[0].cells[columnIndex].textContent.trim());
 
       rowsArray.sort((a, b) => {
@@ -131,12 +153,30 @@
         }
       });
 
-      // Append sorted rows back
       rowsArray.forEach(row => tbody.appendChild(row));
     }
 
-    // Load CSV on page load
-    window.addEventListener('DOMContentLoaded', loadCSV);
+    // Button click handlers
+    btnActive.onclick = () => {
+      setActiveButton(btnActive);
+      loadCSV('active.csv');
+    };
+
+    btnAllTime.onclick = () => {
+      setActiveButton(btnAllTime);
+      loadCSV('alltime.csv');
+    };
+
+    function setActiveButton(activeBtn) {
+      [btnActive, btnAllTime].forEach(btn => {
+        btn.classList.toggle('active', btn === activeBtn);
+      });
+    }
+
+    // Load default CSV on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadCSV('active.csv');
+    });
   </script>
 </body>
 </html>
